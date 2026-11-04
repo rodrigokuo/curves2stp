@@ -1,0 +1,668 @@
+<title>Curvas para STP</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  :root {
+    --bg: #f6f6f4; --panel: #ffffff; --ink: #1b1b1a; --muted: #6b6b66; --line: #dcdcd6;
+    --accent: #2a5bd7; --accent-ink: #ffffff; --curve: #111111; --node: #e0482b; --warn: #a15c00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151514; --panel: #1e1e1c; --ink: #ecece8; --muted: #9a9a93; --line: #34342f;
+      --accent: #6c8ff0; --accent-ink: #0d0d0c; --curve: #f2f2ee; --node: #ff7a5c; --warn: #e0a24a;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151514; --panel: #1e1e1c; --ink: #ecece8; --muted: #9a9a93; --line: #34342f;
+    --accent: #6c8ff0; --accent-ink: #0d0d0c; --curve: #f2f2ee; --node: #ff7a5c; --warn: #e0a24a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, "Segoe UI", sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding-block: 24px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .grid > * { min-width: 0; }
+  .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+  h1 { font-size: 22px; margin: 0; min-width: 0; }
+  .lang { display: flex; flex: none; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+  .lang button { border: 0; border-radius: 0; padding: 6px 11px; font-size: 13px; background: transparent; color: var(--muted); }
+  .lang button + button { border-left: 1px solid var(--line); }
+  .lang button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .grid { display: grid; grid-template-columns: 1fr 280px; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  #stage { position: relative; height: 460px; display: grid; place-items: center; overflow: hidden; outline: none; }
+  #stage:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+  #stage.drag { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+  #hint { text-align: center; color: var(--muted); padding: 24px; }
+  #hint b { color: var(--ink); font-size: 17px; display: block; margin-bottom: 6px; }
+  #prev { position: absolute; inset: 0; width: 100%; height: 100%; display: none; }
+  #prev path { fill: none; stroke: var(--curve); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  #prev circle { fill: var(--node); }
+  #dim { position: absolute; left: 12px; bottom: 10px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .side { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  select, input[type=text] { width: 100%; padding: 7px 8px; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; }
+  .check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink); margin: 0; }
+  button { font: inherit; cursor: pointer; border-radius: 8px; padding: 10px 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  .stats { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .msg { font-size: 13px; color: var(--warn); min-height: 1.2em; }
+  details { margin-top: 14px; font-size: 13px; color: var(--muted); }
+  pre { white-space: pre-wrap; word-break: break-all; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; max-height: 200px; overflow: auto; }
+  .tip { margin: 8px 0 0; line-height: 1.5; }
+  #copy { margin-top: 0; }
+</style>
+<main>
+  <div class="top">
+    <h1 data-i18n="title">Curvas para STP</h1>
+    <div class="lang" role="group" aria-label="Language / Idioma / 语言">
+      <button type="button" data-lang="pt-BR" aria-pressed="true">PT</button>
+      <button type="button" data-lang="en-US" aria-pressed="false">EN</button>
+      <button type="button" data-lang="zh-CN" aria-pressed="false">中文</button>
+    </div>
+  </div>
+  <p class="sub" data-i18n="sub">Copie as curvas no Illustrator, clique na área abaixo e aperte Ctrl+V. Também aceita arrastar um .svg.</p>
+
+  <div class="grid">
+    <div class="panel" id="stage" tabindex="0">
+      <div id="hint" data-i18n-html="hint"><b>Cole aqui (Ctrl+V)</b>ou arraste um arquivo .svg</div>
+      <svg id="prev" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+      <div id="dim"></div>
+    </div>
+
+    <div class="panel side">
+      <div>
+        <label for="unit" data-i18n="unitLabel">Unidade de origem</label>
+        <select id="unit">
+          <option value="0.352777778" data-i18n="unitAi">Illustrator (1 pt = 0,3528 mm)</option>
+          <option value="0.264583333" data-i18n="unitPx">SVG px a 96 dpi (0,2646 mm)</option>
+          <option value="1" data-i18n="unitMm">1 unidade = 1 mm</option>
+        </select>
+      </div>
+      <label class="check"><input type="checkbox" id="flip" checked> <span data-i18n="flip">Inverter Y (SVG tem Y pra baixo)</span></label>
+      <label class="check"><input type="checkbox" id="origin"> <span data-i18n="origin">Mover canto inferior esquerdo para 0,0</span></label>
+      <div>
+        <label for="fname" data-i18n="fname">Nome do arquivo</label>
+        <input type="text" id="fname" value="curvas">
+      </div>
+      <div class="stats" id="stats" data-i18n="statsNone">Nada colado ainda.</div>
+      <div class="msg" id="msg"></div>
+      <button class="primary" id="save" disabled data-i18n="save">Salvar como .stp…</button>
+      <button id="open" data-i18n="open">Abrir arquivo .svg…</button>
+      <input type="file" id="file" accept=".svg,image/svg+xml,.txt,.ai" hidden>
+    </div>
+  </div>
+
+  <details>
+    <summary data-i18n="dbgSum">O que chegou na área de transferência</summary>
+    <pre id="debug" data-i18n="dbgInit">Cole algo para ver os formatos recebidos.</pre>
+    <p class="tip" data-i18n-html="tip">Se o Illustrator não colar nada: em Preferências &gt; Manipulação de arquivos &gt; Área de transferência, ative <b>SVG</b> (copiar como SVG). Alternativa: Arquivo &gt; Exportar &gt; SVG e use "Abrir arquivo .svg…".</p>
+  </details>
+</main>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const stage = $('stage'), prev = $('prev');
+let model = null; // { subs: [{segs:[{k:'L'|'C', p:[[x,y],...]}], closed}], yUp, name }
+
+/* ---------- idiomas ---------- */
+const I18N = {
+  'pt-BR': {
+    title: 'Curvas do Illustrator → STEP',
+    sub: 'Cole a curva, confira a prévia e salve um arquivo .stp para abrir no Plasticity.',
+    hint: '<b>Cole aqui (Ctrl+V)</b>ou arraste um arquivo .svg',
+    unitLabel: 'Unidade de origem', unitAi: 'pt do Illustrator (1 pt = 0,3528 mm)', unitPx: 'px (1 px = 0,2646 mm)', unitMm: 'mm (1 = 1 mm)',
+    flip: 'Inverter eixo Y', origin: 'Mover canto inferior esquerdo para a origem',
+    fname: 'Nome do arquivo', statsNone: 'Nada colado ainda.', save: 'Salvar como .stp…', open: 'Abrir arquivo .svg…',
+    dbgSum: 'Formatos recebidos na colagem', dbgInit: 'Nada colado ainda.',
+    tip: 'Dica: no Illustrator, se a colagem direta não funcionar, use Arquivo › Exportar › <b>SVG</b> e abra ou arraste o arquivo aqui.',
+    files: n => n + ' arquivo(s)', chars: n => n + ' caracteres', empty: '(vazio)',
+    noCurvesSvg: 'O SVG não tem curvas (só texto, imagem ou preenchimentos?). Converta em contornos no Illustrator.',
+    noCurves: 'Não encontrei curvas no que foi colado. Veja os formatos recebidos abaixo.',
+    noIllu: l => 'O navegador não recebeu curvas do Illustrator (só ' + l + '). Use "Abrir arquivo .svg…".',
+    nothing: 'nada',
+    stats: (n, s, w, h) => n + ' contorno(s), ' + s + ' segmento(s)\nTamanho: ' + w + ' × ' + h + ' mm',
+    saveFail: c => 'Não foi possível salvar aqui (' + c + ').', saveFail2: 'Não foi possível salvar aqui.', errGeneric: 'erro',
+    savedZip: n => 'Salvo como .zip (este visualizador não aceita .stp direto). Extraia para obter o ' + n + '.stp.'
+  },
+  'en-US': {
+    title: 'Illustrator Curves → STEP',
+    sub: 'Paste the curve, check the preview and save a .stp file to open in Plasticity.',
+    hint: '<b>Paste here (Ctrl+V)</b>or drop an .svg file',
+    unitLabel: 'Source unit', unitAi: 'Illustrator pt (1 pt = 0.3528 mm)', unitPx: 'px (1 px = 0.2646 mm)', unitMm: 'mm (1 = 1 mm)',
+    flip: 'Flip Y axis', origin: 'Move bottom-left corner to the origin',
+    fname: 'File name', statsNone: 'Nothing pasted yet.', save: 'Save as .stp…', open: 'Open .svg file…',
+    dbgSum: 'Formats received on paste', dbgInit: 'Nothing pasted yet.',
+    tip: 'Tip: in Illustrator, if pasting directly doesn\'t work, use File › Export › <b>SVG</b> and open or drop the file here.',
+    files: n => n + ' file(s)', chars: n => n + ' characters', empty: '(empty)',
+    noCurvesSvg: 'The SVG has no curves (only text, images or fills?). Convert to outlines in Illustrator.',
+    noCurves: 'No curves found in what was pasted. See the received formats below.',
+    noIllu: l => 'The browser did not receive curves from Illustrator (only ' + l + '). Use "Open .svg file…".',
+    nothing: 'nothing',
+    stats: (n, s, w, h) => n + ' path(s), ' + s + ' segment(s)\nSize: ' + w + ' × ' + h + ' mm',
+    saveFail: c => 'Could not save here (' + c + ').', saveFail2: 'Could not save here.', errGeneric: 'error',
+    savedZip: n => 'Saved as .zip (this viewer does not accept .stp directly). Extract it to get ' + n + '.stp.'
+  },
+  'zh-CN': {
+    title: 'Illustrator 曲线 → STEP',
+    sub: '粘贴曲线，查看预览，并保存为 .stp 文件以便在 Plasticity 中打开。',
+    hint: '<b>在此粘贴 (Ctrl+V)</b>或拖入 .svg 文件',
+    unitLabel: '源单位', unitAi: 'Illustrator pt（1 pt = 0.3528 mm）', unitPx: 'px（1 px = 0.2646 mm）', unitMm: 'mm（1 = 1 mm）',
+    flip: '翻转 Y 轴', origin: '将左下角移到原点',
+    fname: '文件名', statsNone: '尚未粘贴内容。', save: '保存为 .stp…', open: '打开 .svg 文件…',
+    dbgSum: '粘贴时收到的格式', dbgInit: '尚未粘贴内容。',
+    tip: '提示：如果在 Illustrator 中无法直接粘贴，请使用 文件 › 导出 › <b>SVG</b>，然后在此打开或拖入该文件。',
+    files: n => n + ' 个文件', chars: n => n + ' 个字符', empty: '（空）',
+    noCurvesSvg: '该 SVG 中没有曲线（只有文字、图像或填充？）。请在 Illustrator 中转换为轮廓。',
+    noCurves: '在粘贴的内容中未找到曲线。请查看下方收到的格式。',
+    noIllu: l => '浏览器没有收到 Illustrator 的曲线（只有 ' + l + '）。请使用“打开 .svg 文件…”。',
+    nothing: '无',
+    stats: (n, s, w, h) => n + ' 条路径，' + s + ' 个线段\n尺寸：' + w + ' × ' + h + ' mm',
+    saveFail: c => '无法在此保存（' + c + '）。', saveFail2: '无法在此保存。', errGeneric: '错误',
+    savedZip: n => '已保存为 .zip（此查看器不直接支持 .stp）。解压后即可得到 ' + n + '.stp。'
+  }
+};
+let lang = 'pt-BR';
+let msgState = null; // { key, args } da mensagem atual
+const t = (key, ...args) => { const v = I18N[lang][key]; return typeof v === 'function' ? v(...args) : v; };
+function setMsg(key, ...args) {
+  msgState = key ? { key, args } : null;
+  $('msg').textContent = key ? t(key, ...args) : '';
+}
+function applyI18n() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
+  document.title = t('title');
+  if (msgState) $('msg').textContent = t(msgState.key, ...msgState.args);
+  if (model) render();
+}
+function setLang(l, save) {
+  if (!I18N[l]) l = 'pt-BR';
+  lang = l;
+  if (save) { try { localStorage.setItem('lang', l); } catch (e) {} }
+  applyI18n();
+}
+document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang, true)));
+
+/* ---------- matrizes ---------- */
+const IDENT = [1, 0, 0, 1, 0, 0];
+const mul = (m, n) => [
+  m[0]*n[0] + m[2]*n[1], m[1]*n[0] + m[3]*n[1],
+  m[0]*n[2] + m[2]*n[3], m[1]*n[2] + m[3]*n[3],
+  m[0]*n[4] + m[2]*n[5] + m[4], m[1]*n[4] + m[3]*n[5] + m[5]
+];
+const apply = (m, [x, y]) => [m[0]*x + m[2]*y + m[4], m[1]*x + m[3]*y + m[5]];
+
+function parseTransform(str) {
+  let m = IDENT;
+  if (!str) return m;
+  const re = /(matrix|translate|scale|rotate|skewX|skewY)\s*\(([^)]*)\)/g;
+  let t;
+  while ((t = re.exec(str))) {
+    const a = t[2].split(/[\s,]+/).filter(Boolean).map(Number);
+    let n = IDENT;
+    switch (t[1]) {
+      case 'matrix': if (a.length === 6) n = a; break;
+      case 'translate': n = [1, 0, 0, 1, a[0] || 0, a[1] || 0]; break;
+      case 'scale': n = [a[0], 0, 0, a.length > 1 ? a[1] : a[0], 0, 0]; break;
+      case 'rotate': {
+        const r = (a[0] || 0) * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+        n = [c, s, -s, c, 0, 0];
+        if (a.length === 3) n = mul(mul([1, 0, 0, 1, a[1], a[2]], n), [1, 0, 0, 1, -a[1], -a[2]]);
+        break;
+      }
+      case 'skewX': n = [1, 0, Math.tan((a[0] || 0) * Math.PI / 180), 1, 0, 0]; break;
+      case 'skewY': n = [1, Math.tan((a[0] || 0) * Math.PI / 180), 0, 1, 0, 0]; break;
+    }
+    m = mul(m, n);
+  }
+  return m;
+}
+
+/* ---------- arcos SVG -> cúbicas ---------- */
+function arcToCubics(x1, y1, rx, ry, phiDeg, fa, fs, x2, y2) {
+  rx = Math.abs(rx); ry = Math.abs(ry);
+  if (!rx || !ry || (x1 === x2 && y1 === y2)) return null;
+  const phi = phiDeg * Math.PI / 180, cp = Math.cos(phi), sp = Math.sin(phi);
+  const dx = (x1 - x2) / 2, dy = (y1 - y2) / 2;
+  const x1p = cp*dx + sp*dy, y1p = -sp*dx + cp*dy;
+  const lam = x1p*x1p/(rx*rx) + y1p*y1p/(ry*ry);
+  if (lam > 1) { const s = Math.sqrt(lam); rx *= s; ry *= s; }
+  const num = rx*rx*ry*ry - rx*rx*y1p*y1p - ry*ry*x1p*x1p;
+  const den = rx*rx*y1p*y1p + ry*ry*x1p*x1p;
+  const co = Math.sqrt(Math.max(0, num/den)) * (fa === fs ? -1 : 1);
+  const cxp = co*rx*y1p/ry, cyp = -co*ry*x1p/rx;
+  const cx = cp*cxp - sp*cyp + (x1 + x2)/2, cy = sp*cxp + cp*cyp + (y1 + y2)/2;
+  const ang = (ux, uy, vx, vy) => Math.atan2(ux*vy - uy*vx, ux*vx + uy*vy);
+  const th1 = ang(1, 0, (x1p - cxp)/rx, (y1p - cyp)/ry);
+  let dth = ang((x1p - cxp)/rx, (y1p - cyp)/ry, (-x1p - cxp)/rx, (-y1p - cyp)/ry);
+  if (!fs && dth > 0) dth -= 2*Math.PI;
+  if (fs && dth < 0) dth += 2*Math.PI;
+  const n = Math.max(1, Math.ceil(Math.abs(dth) / (Math.PI/2) - 1e-9));
+  const delta = dth / n, t = 4/3 * Math.tan(delta/4);
+  const map = (u, v) => [cx + cp*rx*u - sp*ry*v, cy + sp*rx*u + cp*ry*v];
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const a1 = th1 + i*delta, a2 = a1 + delta;
+    const c1 = map(Math.cos(a1) - t*Math.sin(a1), Math.sin(a1) + t*Math.cos(a1));
+    const c2 = map(Math.cos(a2) + t*Math.sin(a2), Math.sin(a2) - t*Math.cos(a2));
+    const e = i === n - 1 ? [x2, y2] : map(Math.cos(a2), Math.sin(a2));
+    out.push([c1, c2, e]);
+  }
+  return out;
+}
+
+/* ---------- atributo d de <path> ---------- */
+function parsePathData(d) {
+  const subs = [];
+  let cur = null, x = 0, y = 0, sx = 0, sy = 0, i = 0, cmd = null;
+  let lastC2 = null, lastQ = null; // reflexão para S e T
+  const n = d.length;
+  const skip = () => { while (i < n && /[\s,]/.test(d[i])) i++; };
+  const num = () => {
+    skip();
+    const m = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/.exec(d.slice(i));
+    if (!m) return NaN;
+    i += m[0].length; return parseFloat(m[0]);
+  };
+  const flag = () => { skip(); const c = d[i++]; return c === '1' ? 1 : 0; };
+  const begin = () => { cur = { segs: [], closed: false }; subs.push(cur); };
+  const need = () => { if (!cur || cur.closed) { begin(); } };
+  const line = (nx, ny) => {
+    need();
+    if (Math.hypot(nx - x, ny - y) > 1e-12) cur.segs.push({ k: 'L', p: [[x, y], [nx, ny]] });
+    x = nx; y = ny;
+  };
+  const cubic = (c1, c2, e) => {
+    need();
+    cur.segs.push({ k: 'C', p: [[x, y], c1, c2, e] });
+    x = e[0]; y = e[1]; lastC2 = c2;
+  };
+  while (true) {
+    skip();
+    if (i >= n) break;
+    if (/[A-Za-z]/.test(d[i])) {
+      cmd = d[i++];
+      if (cmd === 'Z' || cmd === 'z') {
+        if (cur) { line(sx, sy); cur.closed = true; }
+        x = sx; y = sy; lastC2 = lastQ = null; continue;
+      }
+    } else if (cmd === null) break;
+    else if (cmd === 'M') cmd = 'L';
+    else if (cmd === 'm') cmd = 'l';
+    const rel = cmd === cmd.toLowerCase(), C = cmd.toUpperCase();
+    const ox = rel ? x : 0, oy = rel ? y : 0;
+    let ok = true, prevC2 = lastC2, prevQ = lastQ;
+    lastC2 = lastQ = null;
+    if (C === 'M') {
+      const a = num(), b = num(); if (isNaN(a + b)) break;
+      x = sx = a + ox; y = sy = b + oy; begin();
+    } else if (C === 'L') {
+      const a = num(), b = num(); if (isNaN(a + b)) break; line(a + ox, b + oy);
+    } else if (C === 'H') {
+      const a = num(); if (isNaN(a)) break; line(a + ox, y);
+    } else if (C === 'V') {
+      const b = num(); if (isNaN(b)) break; line(x, b + oy);
+    } else if (C === 'C') {
+      const v = [num(), num(), num(), num(), num(), num()]; if (v.some(isNaN)) break;
+      cubic([v[0] + ox, v[1] + oy], [v[2] + ox, v[3] + oy], [v[4] + ox, v[5] + oy]);
+    } else if (C === 'S') {
+      const v = [num(), num(), num(), num()]; if (v.some(isNaN)) break;
+      const c1 = prevC2 ? [2*x - prevC2[0], 2*y - prevC2[1]] : [x, y];
+      cubic(c1, [v[0] + ox, v[1] + oy], [v[2] + ox, v[3] + oy]);
+    } else if (C === 'Q' || C === 'T') {
+      let q;
+      if (C === 'Q') { const v = [num(), num()]; if (v.some(isNaN)) break; q = [v[0] + ox, v[1] + oy]; }
+      else q = prevQ ? [2*x - prevQ[0], 2*y - prevQ[1]] : [x, y];
+      const e = [num(), num()]; if (e.some(isNaN)) break;
+      const ex = e[0] + ox, ey = e[1] + oy;
+      cubic([x + 2/3*(q[0] - x), y + 2/3*(q[1] - y)], [ex + 2/3*(q[0] - ex), ey + 2/3*(q[1] - ey)], [ex, ey]);
+      lastQ = q; ok = false;
+    } else if (C === 'A') {
+      const rx = num(), ry = num(), rot = num(), fa = flag(), fs = flag(), ex = num(), ey = num();
+      if ([rx, ry, rot, ex, ey].some(isNaN)) break;
+      const tx = ex + ox, ty = ey + oy;
+      const arcs = arcToCubics(x, y, rx, ry, rot, fa, fs, tx, ty);
+      if (!arcs) line(tx, ty); else arcs.forEach(a => cubic(a[0], a[1], a[2]));
+      lastC2 = null;
+    } else break;
+    if (C === 'Q' || C === 'T') lastC2 = null;
+    void ok;
+  }
+  return subs.filter(s => s.segs.length);
+}
+
+/* ---------- SVG ---------- */
+const SKIP = new Set(['defs', 'clippath', 'mask', 'symbol', 'metadata', 'title', 'desc', 'style', 'pattern', 'marker', 'lineargradient', 'radialgradient', 'filter']);
+const f = (el, a, d = 0) => { const v = parseFloat(el.getAttribute(a)); return isNaN(v) ? d : v; };
+
+function shapeToD(el) {
+  const tag = el.localName.toLowerCase();
+  if (tag === 'path') return el.getAttribute('d') || '';
+  if (tag === 'line') return `M${f(el,'x1')} ${f(el,'y1')}L${f(el,'x2')} ${f(el,'y2')}`;
+  if (tag === 'polyline' || tag === 'polygon') {
+    const p = (el.getAttribute('points') || '').trim().split(/[\s,]+/).map(Number);
+    if (p.length < 4) return '';
+    let s = `M${p[0]} ${p[1]}`;
+    for (let k = 2; k + 1 < p.length; k += 2) s += `L${p[k]} ${p[k+1]}`;
+    return s + (tag === 'polygon' ? 'Z' : '');
+  }
+  if (tag === 'rect') {
+    const x = f(el,'x'), y = f(el,'y'), w = f(el,'width'), h = f(el,'height');
+    let rx = f(el,'rx', NaN), ry = f(el,'ry', NaN);
+    if (isNaN(rx) && isNaN(ry)) rx = ry = 0; else if (isNaN(rx)) rx = ry; else if (isNaN(ry)) ry = rx;
+    rx = Math.min(rx, w/2); ry = Math.min(ry, h/2);
+    if (!w || !h) return '';
+    if (!rx || !ry) return `M${x} ${y}H${x+w}V${y+h}H${x}Z`;
+    return `M${x+rx} ${y}H${x+w-rx}A${rx} ${ry} 0 0 1 ${x+w} ${y+ry}V${y+h-ry}A${rx} ${ry} 0 0 1 ${x+w-rx} ${y+h}` +
+           `H${x+rx}A${rx} ${ry} 0 0 1 ${x} ${y+h-ry}V${y+ry}A${rx} ${ry} 0 0 1 ${x+rx} ${y}Z`;
+  }
+  if (tag === 'circle' || tag === 'ellipse') {
+    const cx = f(el,'cx'), cy = f(el,'cy');
+    const rx = tag === 'circle' ? f(el,'r') : f(el,'rx'), ry = tag === 'circle' ? rx : f(el,'ry');
+    if (!rx || !ry) return '';
+    return `M${cx+rx} ${cy}A${rx} ${ry} 0 1 1 ${cx-rx} ${cy}A${rx} ${ry} 0 1 1 ${cx+rx} ${cy}Z`;
+  }
+  return '';
+}
+
+function parseSvgText(text) {
+  let doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  let root = doc.documentElement;
+  if (!root || root.localName.toLowerCase() !== 'svg' || doc.querySelector('parsererror')) {
+    doc = new DOMParser().parseFromString(text, 'text/html');
+    root = doc.querySelector('svg');
+  }
+  if (!root) return null;
+  let base = IDENT;
+  const vb = (root.getAttribute('viewBox') || '').trim().split(/[\s,]+/).map(Number);
+  if (vb.length === 4 && vb.every(v => !isNaN(v))) {
+    const w = parseFloat(root.getAttribute('width')), h = parseFloat(root.getAttribute('height'));
+    const sx = w && vb[2] ? w / vb[2] : 1, sy = h && vb[3] ? h / vb[3] : sx;
+    base = mul([sx, 0, 0, sy, 0, 0], [1, 0, 0, 1, -vb[0], -vb[1]]);
+  }
+  const subs = [];
+  (function walk(el, m) {
+    for (const ch of el.children) {
+      const tag = ch.localName.toLowerCase();
+      if (SKIP.has(tag)) continue;
+      if (ch.getAttribute('display') === 'none') continue;
+      const cm = mul(m, parseTransform(ch.getAttribute('transform')));
+      if (tag === 'g' || tag === 'svg' || tag === 'a') { walk(ch, cm); continue; }
+      const d = shapeToD(ch);
+      if (!d) continue;
+      for (const s of parsePathData(d)) {
+        subs.push({ closed: s.closed, segs: s.segs.map(g => ({ k: g.k, p: g.p.map(pt => apply(cm, pt)) })) });
+      }
+    }
+  })(root, base);
+  return { subs, yUp: false };
+}
+
+/* ---------- fluxo de operadores (PDF / Illustrator AICB) ---------- */
+function parseOps(text) {
+  const tokens = text.match(/[-+]?(?:\d+\.?\d*|\.\d+)|[A-Za-z]+/g) || [];
+  const subs = []; let st = [], cur = null, x = 0, y = 0, sx = 0, sy = 0;
+  const begin = () => { cur = { segs: [], closed: false }; subs.push(cur); };
+  const L = (nx, ny) => { if (!cur) begin(); if (Math.hypot(nx-x, ny-y) > 1e-12) cur.segs.push({ k: 'L', p: [[x,y],[nx,ny]] }); x = nx; y = ny; };
+  const C = (a, b, e) => { if (!cur) begin(); cur.segs.push({ k: 'C', p: [[x,y],a,b,e] }); x = e[0]; y = e[1]; };
+  for (const t of tokens) {
+    if (/^[-+.\d]/.test(t)) { st.push(parseFloat(t)); continue; }
+    const a = st; st = [];
+    switch (t.toLowerCase()) {
+      case 'm': if (a.length >= 2) { x = sx = a[a.length-2]; y = sy = a[a.length-1]; begin(); } break;
+      case 'l': if (a.length >= 2) L(a[a.length-2], a[a.length-1]); break;
+      case 'c': if (a.length >= 6) { const v = a.slice(-6); C([v[0],v[1]], [v[2],v[3]], [v[4],v[5]]); } break;
+      case 'v': if (a.length >= 4) { const v = a.slice(-4); C([x,y], [v[0],v[1]], [v[2],v[3]]); } break;
+      case 'y': if (a.length >= 4) { const v = a.slice(-4); C([v[0],v[1]], [v[2],v[3]], [v[2],v[3]]); } break;
+      case 'h': if (cur) { L(sx, sy); cur.closed = true; x = sx; y = sy; cur = null; } break;
+      case 're': if (a.length >= 4) {
+        const [rx, ry, w, h] = a.slice(-4); x = sx = rx; y = sy = ry; begin();
+        L(rx+w, ry); L(rx+w, ry+h); L(rx, ry+h); L(rx, ry); cur.closed = true; cur = null;
+      } break;
+    }
+  }
+  return { subs: subs.filter(s => s.segs.length), yUp: true };
+}
+
+/* ---------- entrada ---------- */
+function extractSvg(text) {
+  const m = /<svg[\s\S]*?<\/svg>/i.exec(text);
+  return m ? m[0] : null;
+}
+
+function load(text, name) {
+  setMsg(null);
+  let res = null;
+  const svg = extractSvg(text);
+  if (svg) res = parseSvgText(svg);
+  else if (/(^|\s)[mlcvyh](\s|$)/i.test(text) && /\d/.test(text)) res = parseOps(text);
+  if (!res || !res.subs.length) {
+    setMsg(svg ? 'noCurvesSvg' : 'noCurves');
+    return false;
+  }
+  model = res;
+  if (name) $('fname').value = name.replace(/\.[^.]+$/, '');
+  $('flip').checked = !res.yUp;
+  render();
+  return true;
+}
+
+document.addEventListener('paste', e => {
+  const cd = e.clipboardData; if (!cd) return;
+  const types = [...cd.types];
+  const info = types.map(ty => `${ty}: ${ty === 'Files' ? t('files', cd.files.length) : t('chars', cd.getData(ty).length)}`);
+  $('debug').textContent = types.length ? info.join('\n') : t('empty');
+  e.preventDefault();
+  let text = cd.getData('image/svg+xml') || cd.getData('text/plain');
+  if (!extractSvg(text) && cd.getData('text/html')) text = cd.getData('text/html');
+  if (cd.files.length && !extractSvg(text)) {
+    const fl = [...cd.files].find(x => /svg|text/.test(x.type) || /\.(svg|txt)$/i.test(x.name));
+    if (fl) { fl.text().then(t => load(t, fl.name)); return; }
+  }
+  if (!text) {
+    setMsg('noIllu', types.join(', ') || t('nothing'));
+    return;
+  }
+  load(text, '');
+});
+
+['dragenter', 'dragover'].forEach(ev => stage.addEventListener(ev, e => { e.preventDefault(); stage.classList.add('drag'); }));
+['dragleave', 'drop'].forEach(ev => stage.addEventListener(ev, e => { e.preventDefault(); stage.classList.remove('drag'); }));
+stage.addEventListener('drop', e => { const fl = e.dataTransfer.files[0]; if (fl) fl.text().then(t => load(t, fl.name)); });
+$('open').onclick = () => $('file').click();
+$('file').onchange = e => { const fl = e.target.files[0]; if (fl) fl.text().then(t => load(t, fl.name)); e.target.value = ''; };
+stage.addEventListener('click', () => stage.focus());
+['unit', 'flip', 'origin'].forEach(id => $(id).addEventListener('change', () => model && render()));
+
+/* ---------- geometria de saída ---------- */
+function outputSubs() {
+  const k = parseFloat($('unit').value), flip = $('flip').checked;
+  let subs = model.subs.map(s => ({
+    closed: s.closed,
+    segs: s.segs.map(g => ({ k: g.k, p: g.p.map(([x, y]) => [x * k, (flip ? -y : y) * k]) }))
+  }));
+  const bb = bbox(subs);
+  if ($('origin').checked) {
+    subs = subs.map(s => ({ closed: s.closed, segs: s.segs.map(g => ({ k: g.k, p: g.p.map(([x, y]) => [x - bb.x0, y - bb.y0]) })) }));
+  }
+  return subs;
+}
+
+function bbox(subs) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const add = ([x, y]) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+  for (const s of subs) for (const g of s.segs) {
+    if (g.k === 'L') { add(g.p[0]); add(g.p[1]); continue; }
+    const [a, b, c, d] = g.p;
+    for (let i = 0; i <= 24; i++) {
+      const t = i/24, u = 1 - t;
+      add([u*u*u*a[0] + 3*u*u*t*b[0] + 3*u*t*t*c[0] + t*t*t*d[0], u*u*u*a[1] + 3*u*u*t*b[1] + 3*u*t*t*c[1] + t*t*t*d[1]]);
+    }
+  }
+  return { x0, y0, x1, y1, w: x1 - x0, h: y1 - y0 };
+}
+
+/* ---------- prévia ---------- */
+function render() {
+  const subs = outputSubs(), bb = bbox(subs);
+  const pad = Math.max(bb.w, bb.h, 1e-6) * 0.06;
+  const r = Math.max(bb.w, bb.h, 1e-6) * 0.006;
+  const P = ([x, y]) => `${+x.toFixed(4)} ${+(-y).toFixed(4)}`;
+  let d = '', dots = '', segN = 0;
+  for (const s of subs) {
+    d += `M${P(s.segs[0].p[0])}`;
+    for (const g of s.segs) { segN++; d += g.k === 'L' ? `L${P(g.p[1])}` : `C${P(g.p[1])} ${P(g.p[2])} ${P(g.p[3])}`; }
+    if (s.closed) d += 'Z';
+    const a = s.segs[0].p[0];
+    dots += `<circle cx="${a[0]}" cy="${-a[1]}" r="${r}"/>`;
+  }
+  prev.setAttribute('viewBox', `${bb.x0 - pad} ${-bb.y1 - pad} ${bb.w + 2*pad} ${bb.h + 2*pad}`);
+  prev.innerHTML = `<path d="${d}"/>${dots}`;
+  prev.style.display = 'block';
+  $('hint').style.display = 'none';
+  $('dim').textContent = `${bb.w.toFixed(2)} × ${bb.h.toFixed(2)} mm`;
+  $('stats').textContent = t('stats', subs.length, segN, bb.w.toFixed(2), bb.h.toFixed(2));
+  $('stats').style.whiteSpace = 'pre-line';
+  $('save').disabled = false;
+}
+
+/* ---------- STEP ---------- */
+const real = n => {
+  let s = (Math.abs(n) < 5e-7 ? 0 : +n.toFixed(6)).toString();
+  if (/e/i.test(s)) s = n.toFixed(6);
+  return s.includes('.') ? s : s + '.';
+};
+const str = s => s.replace(/[^\x20-\x7e]/g, '_').replace(/'/g, "''");
+
+function buildStep(subs, name) {
+  const out = []; let id = 0;
+  const add = s => { out.push(`#${++id}=${s};`); return id; };
+  const nm = str(name);
+
+  const len = add(`(LENGTH_UNIT() NAMED_UNIT(*) SI_UNIT(.MILLI.,.METRE.))`);
+  const ang = add(`(NAMED_UNIT(*) PLANE_ANGLE_UNIT() SI_UNIT($,.RADIAN.))`);
+  const sa = add(`(NAMED_UNIT(*) SI_UNIT($,.STERADIAN.) SOLID_ANGLE_UNIT())`);
+  const unc = add(`UNCERTAINTY_MEASURE_WITH_UNIT(LENGTH_MEASURE(1.E-05),#${len},'distance_accuracy_value','confusion accuracy')`);
+  const ctx = add(`(GEOMETRIC_REPRESENTATION_CONTEXT(3) GLOBAL_UNCERTAINTY_ASSIGNED_CONTEXT((#${unc})) GLOBAL_UNIT_ASSIGNED_CONTEXT((#${len},#${ang},#${sa})) REPRESENTATION_CONTEXT('Context3D','3D Context with UNIT and UNCERTAINTY'))`);
+
+  const origin = add(`CARTESIAN_POINT('',(0.,0.,0.))`);
+  const dz = add(`DIRECTION('',(0.,0.,1.))`);
+  const dx = add(`DIRECTION('',(1.,0.,0.))`);
+  const axis = add(`AXIS2_PLACEMENT_3D('',#${origin},#${dz},#${dx})`);
+
+  const pts = new Map();
+  const point = ([x, y]) => {
+    const key = real(x) + ',' + real(y);
+    if (!pts.has(key)) pts.set(key, add(`CARTESIAN_POINT('',(${real(x)},${real(y)},0.))`));
+    return pts.get(key);
+  };
+  const curves = [];
+  for (const s of subs) for (const g of s.segs) {
+    const refs = g.p.map(p => '#' + point(p)).join(',');
+    curves.push('#' + (g.k === 'L'
+      ? add(`B_SPLINE_CURVE_WITH_KNOTS('',1,(${refs}),.POLYLINE_FORM.,.F.,.F.,(2,2),(0.,1.),.UNSPECIFIED.)`)
+      : add(`B_SPLINE_CURVE_WITH_KNOTS('',3,(${refs}),.UNSPECIFIED.,.F.,.F.,(4,4),(0.,1.),.UNSPECIFIED.)`)));
+  }
+  const gcs = add(`GEOMETRIC_CURVE_SET('',(${curves.join(',')}))`);
+
+  const appCtx = add(`APPLICATION_CONTEXT('core data for automotive mechanical design processes')`);
+  add(`APPLICATION_PROTOCOL_DEFINITION('international standard','automotive_design',2000,#${appCtx})`);
+  const prodCtx = add(`PRODUCT_CONTEXT('',#${appCtx},'mechanical')`);
+  const prod = add(`PRODUCT('${nm}','${nm}','',(#${prodCtx}))`);
+  const pdCtx = add(`PRODUCT_DEFINITION_CONTEXT('part definition',#${appCtx},'design')`);
+  const pdf = add(`PRODUCT_DEFINITION_FORMATION('','',#${prod})`);
+  const pd = add(`PRODUCT_DEFINITION('design','',#${pdf},#${pdCtx})`);
+  const pds = add(`PRODUCT_DEFINITION_SHAPE('','',#${pd})`);
+  const rep = add(`SHAPE_REPRESENTATION('${nm}',(#${axis},#${gcs}),#${ctx})`);
+  add(`SHAPE_DEFINITION_REPRESENTATION(#${pds},#${rep})`);
+
+  const date = new Date().toISOString().slice(0, 19);
+  return `ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Curvas 2D do Illustrator'),'2;1');
+FILE_NAME('${nm}.stp','${date}',(''),(''),'Curvas para STP','Curvas para STP','');
+FILE_SCHEMA(('AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }'));
+ENDSEC;
+DATA;
+${out.join('\n')}
+ENDSEC;
+END-ISO-10303-21;
+`;
+}
+
+/* zip sem compressão (método "store") com um único arquivo */
+const CRC = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t.push(c >>> 0); } return t; })();
+function zipOne(fname, text) {
+  const data = new TextEncoder().encode(text), nm = new TextEncoder().encode(fname);
+  let crc = 0xFFFFFFFF; for (const b of data) crc = CRC[(crc ^ b) & 255] ^ (crc >>> 8);
+  crc = (crc ^ 0xFFFFFFFF) >>> 0;
+  const loc = 30 + nm.length, cen = 46 + nm.length, buf = new Uint8Array(loc + data.length + cen + 22);
+  const v = new DataView(buf.buffer);
+  v.setUint32(0, 0x04034b50, true); v.setUint16(4, 20, true); v.setUint16(6, 0x0800, true);
+  v.setUint32(14, crc, true); v.setUint32(18, data.length, true); v.setUint32(22, data.length, true); v.setUint16(26, nm.length, true);
+  buf.set(nm, 30); buf.set(data, loc);
+  let o = loc + data.length;
+  v.setUint32(o, 0x02014b50, true); v.setUint16(o+4, 20, true); v.setUint16(o+6, 20, true); v.setUint16(o+8, 0x0800, true);
+  v.setUint32(o+16, crc, true); v.setUint32(o+20, data.length, true); v.setUint32(o+24, data.length, true); v.setUint16(o+28, nm.length, true);
+  buf.set(nm, o + 46);
+  const e = o + cen;
+  v.setUint32(e, 0x06054b50, true); v.setUint16(e+8, 1, true); v.setUint16(e+10, 1, true); v.setUint32(e+12, cen, true); v.setUint32(e+16, loc + data.length, true);
+  return buf;
+}
+
+let downloadsCap = null;
+if (window.claude && window.claude.use) {
+  window.claude.use('downloads').then(d => { downloadsCap = d; }).catch(() => {});
+}
+
+$('save').onclick = async () => {
+  if (!model) return;
+  const name = ($('fname').value.trim() || 'curvas').replace(/[\\/:*?"<>|]/g, '_');
+  const text = buildStep(outputSubs(), name);
+  const blob = new Blob([text], { type: 'application/step' });
+  if (window.showSaveFilePicker && downloadsCap) {
+    try {
+      const h = await window.showSaveFilePicker({
+        suggestedName: name + '.stp',
+        types: [{ description: 'STEP (AP214)', accept: { 'application/step': ['.stp', '.step'] } }]
+      });
+      const w = await h.createWritable(); await w.write(blob); await w.close();
+      setMsg(null); return;
+    } catch (err) { if (err.name === 'AbortError') return; }
+  }
+  if (downloadsCap) {
+    try { await downloadsCap.save({ filename: name + '.stp', data: text }); setMsg(null); return; }
+    catch (err) {
+      if (err && err.code === 'declined') return;
+      if (!err || err.code !== 'rejected_extension') { setMsg('saveFail', (err && err.code) || t('errGeneric')); return; }
+    }
+    // o visualizador não aceita .stp: entrega um .zip com o .stp dentro
+    try {
+      await downloadsCap.save({ filename: name + '.zip', data: zipOne(name + '.stp', text) });
+      setMsg('savedZip', name);
+    } catch (err) { if (!err || err.code !== 'declined') setMsg('saveFail2'); }
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name + '.stp'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+
+{
+  let l = null;
+  try { l = localStorage.getItem('lang'); } catch (e) {}
+  if (!I18N[l || '']) {
+    const n = (navigator.language || '').toLowerCase();
+    l = n.startsWith('zh') ? 'zh-CN' : n.startsWith('en') ? 'en-US' : 'pt-BR';
+  }
+  setLang(l, false);
+}
+stage.focus();
+</script>
