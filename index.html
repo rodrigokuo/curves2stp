@@ -61,6 +61,7 @@
   pre { white-space: pre-wrap; word-break: break-all; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; max-height: 200px; overflow: auto; }
   .tip { margin: 8px 0 0; line-height: 1.5; }
   #copy { margin-top: 0; }
+  .notice { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--warn); border-radius: 8px; font-size: 13px; color: var(--ink); background: color-mix(in srgb, var(--warn) 10%, var(--panel)); }
 </style>
 <main>
   <div class="top">
@@ -103,6 +104,8 @@
     </div>
   </div>
 
+  <div class="notice" data-i18n-html="notice"><b>Não está colando?</b> No Illustrator, abra Preferências › Clipboard Handling e marque <b>Include SVG Code</b>. Depois copie a curva de novo.</div>
+
   <details>
     <summary data-i18n="dbgSum">O que chegou na área de transferência</summary>
     <pre id="debug" data-i18n="dbgInit">Cole algo para ver os formatos recebidos.</pre>
@@ -120,6 +123,7 @@ let model = null; // { subs: [{segs:[{k:'L'|'C', p:[[x,y],...]}], closed}], yUp,
 const I18N = {
   'pt-BR': {
     title: 'Curvas do Illustrator → STEP',
+    notice: '<b>Não está colando?</b> No Illustrator, abra Preferências › Clipboard Handling e marque <b>Include SVG Code</b>. Depois copie a curva de novo.',
     sub: 'Cole a curva, confira a prévia e salve um arquivo .stp para abrir no Plasticity.',
     hint: '<b>Cole aqui (Ctrl+V)</b>ou arraste um arquivo .svg',
     unitLabel: 'Unidade de origem', unitAi: 'pt do Illustrator (1 pt = 0,3528 mm)', unitPx: 'px (1 px = 0,2646 mm)', unitMm: 'mm (1 = 1 mm)',
@@ -138,6 +142,7 @@ const I18N = {
   },
   'en-US': {
     title: 'Illustrator Curves → STEP',
+    notice: '<b>Not pasting?</b> In Illustrator, open Preferences › Clipboard Handling and check <b>Include SVG Code</b>. Then copy the curve again.',
     sub: 'Paste the curve, check the preview and save a .stp file to open in Plasticity.',
     hint: '<b>Paste here (Ctrl+V)</b>or drop an .svg file',
     unitLabel: 'Source unit', unitAi: 'Illustrator pt (1 pt = 0.3528 mm)', unitPx: 'px (1 px = 0.2646 mm)', unitMm: 'mm (1 = 1 mm)',
@@ -156,6 +161,7 @@ const I18N = {
   },
   'zh-CN': {
     title: 'Illustrator 曲线 → STEP',
+    notice: '<b>无法粘贴？</b> 在 Illustrator 中打开 首选项 › Clipboard Handling，勾选 <b>Include SVG Code</b>，然后重新复制曲线。',
     sub: '粘贴曲线，查看预览，并保存为 .stp 文件以便在 Plasticity 中打开。',
     hint: '<b>在此粘贴 (Ctrl+V)</b>或拖入 .svg 文件',
     unitLabel: '源单位', unitAi: 'Illustrator pt（1 pt = 0.3528 mm）', unitPx: 'px（1 px = 0.2646 mm）', unitMm: 'mm（1 = 1 mm）',
